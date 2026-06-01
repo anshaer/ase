@@ -1,31 +1,37 @@
-name: Build Windows Desktop App
+name: Build Desktop Apps
 
 on:
   push:
     branches:
-      - main  # 如果您的 GitHub 分支叫 master，請跟我說，通常預設是 main
+      - main
 
 jobs:
-  release:
+  # 這是原本的 Windows 打包
+  release-windows:
     runs-on: windows-latest
-
     steps:
-      - name: 複製雲端程式碼
-        uses: actions/checkout@v4
-
-      - name: 安裝 Node.js 環境
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
-
-      - name: 乾淨安裝所有套件
-        run: npm install
-
-      - name: 執行 Electron 打包指令
-        run: npm run package-win
-
-      - name: 上傳打包好的 EXE 壓縮包
-        uses: actions/upload-artifact@v4
+      - run: npm install
+      - run: npm run package-win
+      - uses: actions/upload-artifact@v4
         with:
           name: Windows-EXE-成品
+          path: dist/
+
+  # 這是新加的 Mac 打包（雲端會啟動一台 Mac 幫你做）
+  release-mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+      - run: npm run package-mac
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Mac-APP-成品
           path: dist/
