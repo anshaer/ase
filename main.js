@@ -2,19 +2,19 @@ const { app, BrowserWindow } = require('electron');
 
 function createWindow() {
   const win = new BrowserWindow({
-    width: 1200,          // 軟體視窗預設寬度
-    height: 800,         // 軟體視窗預設高度
+    width: 1200,          
+    height: 800,         
+    autoHideMenuBar: true,  // 🔥 關鍵是這行！加進來選單列就徹底隱藏了
     webPreferences: {
       nodeIntegration: false, 
       contextIsolation: true, 
     }
   });
 
-  // 讓視窗直接載入您最上層的 index.html
   win.loadFile('index.html'); 
 }
 
-// 解鎖記憶體上限到 8GB，完全不卡效能
+// 解鎖記憶體上限到 8GB
 app.commandLine.appendSwitch('js-flags', '--max-old-space-size=8192');
 
 app.whenReady().then(createWindow);
