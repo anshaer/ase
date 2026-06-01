@@ -4,8 +4,8 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "package-win": "electron-packager . ASE --platform=win32 --arch=x64 --out=dist --overwrite --icon=icon"
-    "package-mac": "electron-packager . ASE --platform=win32 --arch=x64 --out=dist --overwrite --icon=icon"
+    "package-win": "electron-packager . ASE --platform=win32 --arch=x64 --out=dist --overwrite",
+    "package-mac": "electron-packager . ASE --platform=darwin --arch=x64 --out=dist --overwrite"
   },
   "devDependencies": {
     "electron": "^30.0.0",
