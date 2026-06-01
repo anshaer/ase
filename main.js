@@ -4,10 +4,11 @@ function createWindow() {
   const win = new BrowserWindow({
     width: 1200,          
     height: 800,         
-    autoHideMenuBar: true,  // 🔥 關鍵是這行！加進來選單列就徹底隱藏了
+    autoHideMenuBar: true, 
     webPreferences: {
       nodeIntegration: false, 
       contextIsolation: true, 
+      backgroundThrottling: false
     }
   });
 
