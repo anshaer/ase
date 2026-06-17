@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background: transparent; }
+        #chat-log { color: white; font-size: 20px; font-family: sans-serif; }
+    </style>
+</head>
+<body>
+    <div id="chat-log"></div>
+
+    <script>
+        // 觸發彩帶的關鍵字
+        const keywords = ["恭喜", "生日快樂"];
+
+        // 模擬接收來自後端的訊息 (透過 WebSocket 或本地 JSON)
+        // 這裡假設你已經透過後端取得訊息字串: message
+        function handleNewMessage(message) {
+            // 檢查關鍵字
+            if (keywords.some(k => message.includes(k))) {
+                confetti({
+                    particleCount: 150,
+                    spread: 70,
+                    origin: { y: 0.6 }
+                });
+            }
+            
+            // 將訊息加入頁面
+            const log = document.getElementById('chat-log');
+            const div = document.createElement('div');
+            div.innerText = message;
+            log.appendChild(div);
+        }
+
+        // 記憶體管理：每 60 秒清除一次過舊訊息 (防止記憶體過載)
+        setInterval(() => {
+            const log = document.getElementById('chat-log');
+            // 只保留最後 50 條訊息
+            while (log.children.length > 50) {
+                log.removeChild(log.firstChild);
+            }
+            console.log("Memory cleared");
+        }, 60000); 
+    </script>
+</body>
+</html>
