@@ -1,47 +1,190 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-TW">
 <head>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live2D 網頁檢視器</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/pixi.js@6.5.2/dist/browser/pixi.min.js"></script>
+    <script src="https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pixi-live2d-display/dist/index.min.js"></script>
+
     <style>
-        body { margin: 0; overflow: hidden; background: transparent; }
-        #chat-log { color: white; font-size: 20px; font-family: sans-serif; }
+        /* 薄荷巧克力配色主題 */
+        :root {
+            --mint: #98FF98;
+            --mint-dark: #7be07b;
+            --choco: #3E2723;
+            --choco-light: #5d4037;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--mint);
+            color: var(--choco);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* 控制列樣式 */
+        #controls {
+            padding: 15px 20px;
+            background-color: var(--choco);
+            color: var(--mint);
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            z-index: 10;
+            flex-wrap: wrap; /* 確保在小螢幕上能自動折行 */
+        }
+
+        .title {
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-right: auto;
+        }
+
+        /* 隱藏預設的醜陋上傳元件 */
+        input[type="file"] {
+            display: none;
+        }
+
+        /* 自訂上傳按鈕外觀 */
+        .custom-file-upload {
+            padding: 10px 20px;
+            background-color: var(--mint);
+            color: var(--choco);
+            border: 2px solid var(--mint);
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s ease-in-out;
+            text-align: center;
+        }
+
+        .custom-file-upload:hover {
+            background-color: var(--mint-dark);
+            border-color: var(--mint-dark);
+            box-shadow: 0 0 8px rgba(152, 255, 152, 0.6);
+        }
+
+        #status {
+            font-size: 0.9rem;
+            color: #ccc;
+        }
+
+        /* 畫布容器 */
+        #canvas-container {
+            flex-grow: 1;
+            width: 100%;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            touch-action: none; /* 防止手機觸控時產生預設滾動行為 */
+        }
     </style>
 </head>
 <body>
-    <div id="chat-log"></div>
+
+    <div id="controls">
+        <div class="title">Live2D Viewer</div>
+        <span id="status">等待載入模型...</span>
+        
+        <label for="folderInput" class="custom-file-upload">
+            📁 載入本機模型資料夾
+        </label>
+        <input type="file" id="folderInput" webkitdirectory multiple>
+    </div>
+
+    <div id="canvas-container"></div>
 
     <script>
-        // 觸發彩帶的關鍵字
-        const keywords = ["恭喜", "生日快樂"];
+        // 初始化 PixiJS 應用程式
+        const container = document.getElementById('canvas-container');
+        const app = new PIXI.Application({
+            resizeTo: container,
+            transparent: true,
+            backgroundAlpha: 0 // 背景透明，透出網頁的薄荷綠
+        });
+        container.appendChild(app.view);
 
-        // 模擬接收來自後端的訊息 (透過 WebSocket 或本地 JSON)
-        // 這裡假設你已經透過後端取得訊息字串: message
-        function handleNewMessage(message) {
-            // 檢查關鍵字
-            if (keywords.some(k => message.includes(k))) {
-                confetti({
-                    particleCount: 150,
-                    spread: 70,
-                    origin: { y: 0.6 }
+        let currentModel = null;
+        const statusText = document.getElementById('status');
+
+        // 核心載入函式
+        async function loadLocalLive2D(files) {
+            try {
+                statusText.textContent = "載入中，請稍候...";
+                statusText.style.color = "var(--mint)";
+
+                // 1. 清除記憶體與先前資源
+                if (currentModel) {
+                    app.stage.removeChild(currentModel);
+                    // 澈底銷毀：包含子物件、紋理與 WebGL 緩衝區
+                    currentModel.destroy({ children: true, texture: true, baseTexture: true });
+                    currentModel = null;
+                }
+
+                // 2. 解析檔案陣列並生成 Live2D 模型
+                currentModel = await PIXI.live2d.Live2DModel.from(files);
+
+                // 3. 畫面自適應與置中計算
+                const scaleX = app.renderer.width / currentModel.width;
+                const scaleY = app.renderer.height / currentModel.height;
+                // 取長寬最小比例，並乘以 0.8 留出邊距
+                currentModel.scale.set(Math.min(scaleX, scaleY) * 0.8); 
+                
+                currentModel.x = app.renderer.width / 2 - currentModel.width / 2;
+                currentModel.y = app.renderer.height / 2 - currentModel.height / 2;
+
+                app.stage.addChild(currentModel);
+
+                // 4. 啟動滑鼠/觸控面部追蹤
+                app.stage.interactive = true;
+                app.stage.on('pointermove', (event) => {
+                    if (currentModel) {
+                        currentModel.focus(event.data.global.x, event.data.global.y);
+                    }
                 });
+
+                statusText.textContent = "載入成功！滑鼠移動可觀看面部追蹤。";
+
+            } catch (error) {
+                console.error("模型載入發生錯誤:", error);
+                statusText.textContent = "載入失敗！請確認資料夾內含 .model3.json 與相關貼圖。";
+                statusText.style.color = "#ff6b6b"; // 錯誤時顯示紅色
             }
-            
-            // 將訊息加入頁面
-            const log = document.getElementById('chat-log');
-            const div = document.createElement('div');
-            div.innerText = message;
-            log.appendChild(div);
         }
 
-        // 記憶體管理：每 60 秒清除一次過舊訊息 (防止記憶體過載)
-        setInterval(() => {
-            const log = document.getElementById('chat-log');
-            // 只保留最後 50 條訊息
-            while (log.children.length > 50) {
-                log.removeChild(log.firstChild);
+        // 監聽選擇資料夾事件
+        document.getElementById('folderInput').addEventListener('change', (event) => {
+            const files = Array.from(event.target.files);
+            if (files.length > 0) {
+                loadLocalLive2D(files);
             }
-            console.log("Memory cleared");
-        }, 60000); 
+        });
+
+        // 監聽視窗縮放，動態保持模型置中
+        window.addEventListener('resize', () => {
+            if (currentModel) {
+                currentModel.x = app.renderer.width / 2 - currentModel.width / 2;
+                currentModel.y = app.renderer.height / 2 - currentModel.height / 2;
+            }
+        });
     </script>
+
 </body>
 </html>
