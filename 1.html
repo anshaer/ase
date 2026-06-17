@@ -111,40 +111,35 @@
 
     <div id="canvas-container"></div>
 
-    <script>
-        // 初始化 PixiJS 應用程式
+   <script>
         const container = document.getElementById('canvas-container');
         const app = new PIXI.Application({
             resizeTo: container,
             transparent: true,
-            backgroundAlpha: 0 // 背景透明，透出網頁的薄荷綠
+            backgroundAlpha: 0 
         });
         container.appendChild(app.view);
 
         let currentModel = null;
         const statusText = document.getElementById('status');
 
-        // 核心載入函式
         async function loadLocalLive2D(files) {
             try {
-                statusText.textContent = "載入中，請稍候...";
+                // 1. 顯示偵測到的檔案總數
+                statusText.textContent = `偵測到 ${files.length} 個檔案，正在解析中...`;
                 statusText.style.color = "var(--mint)";
 
-                // 1. 清除記憶體與先前資源
                 if (currentModel) {
                     app.stage.removeChild(currentModel);
-                    // 澈底銷毀：包含子物件、紋理與 WebGL 緩衝區
                     currentModel.destroy({ children: true, texture: true, baseTexture: true });
                     currentModel = null;
                 }
 
-                // 2. 解析檔案陣列並生成 Live2D 模型
+                // 2. 解析檔案陣列
                 currentModel = await PIXI.live2d.Live2DModel.from(files);
 
-                // 3. 畫面自適應與置中計算
                 const scaleX = app.renderer.width / currentModel.width;
                 const scaleY = app.renderer.height / currentModel.height;
-                // 取長寬最小比例，並乘以 0.8 留出邊距
                 currentModel.scale.set(Math.min(scaleX, scaleY) * 0.8); 
                 
                 currentModel.x = app.renderer.width / 2 - currentModel.width / 2;
@@ -152,7 +147,6 @@
 
                 app.stage.addChild(currentModel);
 
-                // 4. 啟動滑鼠/觸控面部追蹤
                 app.stage.interactive = true;
                 app.stage.on('pointermove', (event) => {
                     if (currentModel) {
@@ -164,12 +158,12 @@
 
             } catch (error) {
                 console.error("模型載入發生錯誤:", error);
-                statusText.textContent = "載入失敗！請確認資料夾內含 .model3.json 與相關貼圖。";
-                statusText.style.color = "#ff6b6b"; // 錯誤時顯示紅色
+                // 3. 發生錯誤時，直接印出檔案數與系統錯誤訊息
+                statusText.innerHTML = `載入失敗！共讀取 ${files.length} 個檔案。<br>錯誤原因: <span style="color: #ffcccc;">${error.message || error}</span>`;
+                statusText.style.color = "#ff6b6b"; 
             }
         }
 
-        // 監聽選擇資料夾事件
         document.getElementById('folderInput').addEventListener('change', (event) => {
             const files = Array.from(event.target.files);
             if (files.length > 0) {
@@ -177,7 +171,6 @@
             }
         });
 
-        // 監聽視窗縮放，動態保持模型置中
         window.addEventListener('resize', () => {
             if (currentModel) {
                 currentModel.x = app.renderer.width / 2 - currentModel.width / 2;
