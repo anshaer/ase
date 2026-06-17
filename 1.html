@@ -4,16 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Live2D 網頁檢視器</title>
-    <!--
-    <script src="https://cdn.jsdelivr.net/npm/pixi.js@6.5.2/dist/browser/pixi.min.js"></script>
-    <script src="https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/pixi-live2d-display/dist/index.min.js"></script>
-    -->
-    <script src="https://cdn.jsdelivr.net/npm/pixi.js@6.5.2/dist/browser/pixi.min.js"></script>
-    <script src="https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/pixi-live2d-display@0.4.3/dist/cubism4.min.js"></script>
-
     
+    <script src="https://cdn.jsdelivr.net/npm/pixi.js@6.5.2/dist/browser/pixi.min.js"></script>
+    
+    <script src="https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/pixi-live2d-display@0.4.0-rc.2/dist/cubism4.min.js"></script>
 
     <style>
         /* 薄荷巧克力配色主題 */
@@ -21,7 +17,6 @@
             --mint: #98FF98;
             --mint-dark: #7be07b;
             --choco: #3E2723;
-            --choco-light: #5d4037;
         }
 
         body {
@@ -36,7 +31,6 @@
             overflow: hidden;
         }
 
-        /* 控制列樣式 */
         #controls {
             padding: 15px 20px;
             background-color: var(--choco);
@@ -47,7 +41,6 @@
             align-items: center;
             box-shadow: 0 4px 10px rgba(0,0,0,0.3);
             z-index: 10;
-            flex-wrap: wrap; /* 確保在小螢幕上能自動折行 */
         }
 
         .title {
@@ -56,12 +49,10 @@
             margin-right: auto;
         }
 
-        /* 隱藏預設的醜陋上傳元件 */
         input[type="file"] {
             display: none;
         }
 
-        /* 自訂上傳按鈕外觀 */
         .custom-file-upload {
             padding: 10px 20px;
             background-color: var(--mint);
@@ -70,14 +61,12 @@
             border-radius: 6px;
             cursor: pointer;
             font-weight: bold;
-            transition: all 0.2s ease-in-out;
-            text-align: center;
+            transition: all 0.2s;
         }
 
         .custom-file-upload:hover {
             background-color: var(--mint-dark);
             border-color: var(--mint-dark);
-            box-shadow: 0 0 8px rgba(152, 255, 152, 0.6);
         }
 
         #status {
@@ -85,28 +74,23 @@
             color: #ccc;
         }
 
-        /* 畫布容器 */
         #canvas-container {
             flex-grow: 1;
             width: 100%;
             position: relative;
-            display: flex;
-            justify-content: center;
-            align-items: center;
         }
 
         canvas {
             display: block;
             width: 100%;
             height: 100%;
-            touch-action: none; /* 防止手機觸控時產生預設滾動行為 */
         }
     </style>
 </head>
 <body>
 
     <div id="controls">
-        <div class="title">gdfhjLive2D Viewer</div>
+        <div class="title">Live2D Viewer</div>
         <span id="status">等待載入模型...</span>
         
         <label for="folderInput" class="custom-file-upload">
@@ -117,7 +101,7 @@
 
     <div id="canvas-container"></div>
 
-   <script>
+    <script>
         const container = document.getElementById('canvas-container');
         const app = new PIXI.Application({
             resizeTo: container,
@@ -131,19 +115,20 @@
 
         async function loadLocalLive2D(files) {
             try {
-                // 1. 顯示偵測到的檔案總數
                 statusText.textContent = `偵測到 ${files.length} 個檔案，正在解析中...`;
                 statusText.style.color = "var(--mint)";
 
+                // 清除舊模型記憶體
                 if (currentModel) {
                     app.stage.removeChild(currentModel);
                     currentModel.destroy({ children: true, texture: true, baseTexture: true });
                     currentModel = null;
                 }
 
-                // 2. 解析檔案陣列
+                // 解析模型檔案
                 currentModel = await PIXI.live2d.Live2DModel.from(files);
 
+                // 畫面適應與置中
                 const scaleX = app.renderer.width / currentModel.width;
                 const scaleY = app.renderer.height / currentModel.height;
                 currentModel.scale.set(Math.min(scaleX, scaleY) * 0.8); 
@@ -153,6 +138,7 @@
 
                 app.stage.addChild(currentModel);
 
+                // 滑鼠追蹤
                 app.stage.interactive = true;
                 app.stage.on('pointermove', (event) => {
                     if (currentModel) {
@@ -164,8 +150,7 @@
 
             } catch (error) {
                 console.error("模型載入發生錯誤:", error);
-                // 3. 發生錯誤時，直接印出檔案數與系統錯誤訊息
-                statusText.innerHTML = `載入失敗！共讀取 ${files.length} 個檔案。<br>錯誤原因: <span style="color: #ffcccc;">${error.message || error}</span>`;
+                statusText.innerHTML = `載入失敗！錯誤原因: <span style="color: #ffcccc;">${error.message || error}</span>`;
                 statusText.style.color = "#ff6b6b"; 
             }
         }
